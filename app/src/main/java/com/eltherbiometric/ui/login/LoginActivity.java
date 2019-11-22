@@ -5,6 +5,7 @@ import android.app.Activity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -22,9 +23,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.eltherbiometric.MainActivity;
 import com.eltherbiometric.R;
-import com.eltherbiometric.ui.login.LoginViewModel;
-import com.eltherbiometric.ui.login.LoginViewModelFactory;
+import com.eltherbiometric.utils.Config;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -37,10 +38,13 @@ public class LoginActivity extends AppCompatActivity {
         loginViewModel = ViewModelProviders.of(this, new LoginViewModelFactory())
                 .get(LoginViewModel.class);
 
-        final EditText usernameEditText = findViewById(R.id.username);
-        final EditText passwordEditText = findViewById(R.id.password);
-        final Button loginButton = findViewById(R.id.login);
-        final ProgressBar loadingProgressBar = findViewById(R.id.loading);
+        final EditText usernameEditText = findViewById(R.id.etUsername);
+        final EditText passwordEditText = findViewById(R.id.etPassword);
+        final Button loginButton = findViewById(R.id.btnLogin);
+        final ProgressBar loadingProgressBar = findViewById(R.id.btnLoading);
+
+        usernameEditText.setText(Config.UserName);
+        passwordEditText.setText(Config.Password);
 
         loginViewModel.getLoginFormState().observe(this, new Observer<LoginFormState>() {
             @Override
@@ -70,11 +74,13 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 if (loginResult.getSuccess() != null) {
                     updateUiWithUser(loginResult.getSuccess());
-                }
-                setResult(Activity.RESULT_OK);
+                    setResult(Activity.RESULT_OK);
 
-                //Complete and destroy login activity once successful
-                finish();
+                    //Complete and destroy login activity once successful
+                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                    startActivity(intent);
+                    finish();
+                }
             }
         });
 
