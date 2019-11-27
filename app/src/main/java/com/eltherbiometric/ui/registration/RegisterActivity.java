@@ -93,11 +93,11 @@ public class RegisterActivity extends AppCompatActivity {
         etBirth.setText(String.format("%s", OcrDatas.get(4)));
         etGender.setText(String.format("%s", OcrDatas.get(5)));
         etAddress.setText(String.format("%s %s %s", OcrDatas.get(6), OcrDatas.get(7), OcrDatas.get(8)));
-//        etReligion.setText(String.format("%s", OcrDatas.get(9)));
-//        etStatus.setText(String.format("%s", OcrDatas.get(10)));
-//        etWork.setText(String.format("%s", OcrDatas.get(11)));
-//        etNationality.setText(String.format("%s", OcrDatas.get(12)));
-//        etExpire.setText(String.format("%s", OcrDatas.get(13)));
+        etReligion.setText(9 < OcrDatas.size() ? String.format("%s", OcrDatas.get(9)) : "");
+        etStatus.setText(10 < OcrDatas.size() ? String.format("%s", OcrDatas.get(10)) : "");
+        etWork.setText(11 < OcrDatas.size() ? String.format("%s", OcrDatas.get(11)) : "");
+        etNationality.setText(12 < OcrDatas.size() ? String.format("%s", OcrDatas.get(12)) : "");
+        etExpire.setText(13 < OcrDatas.size() ? String.format("%s", OcrDatas.get(13)) : "");
     }
 
     private void initComponents() {

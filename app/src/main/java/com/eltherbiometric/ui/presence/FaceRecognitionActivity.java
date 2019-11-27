@@ -61,6 +61,7 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.eltherbiometric.R;
+import com.eltherbiometric.data.model.User;
 import com.eltherbiometric.data.sqllite.Services;
 import com.eltherbiometric.ui.facerecog.CameraBridgeViewBase;
 import com.eltherbiometric.ui.facerecog.NativeMethods;
@@ -86,11 +87,13 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
+import cn.pedant.SweetAlert.SweetAlertDialog;
+
 
 public class FaceRecognitionActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
     private static final String TAG = FaceRecognitionActivity.class.getSimpleName();
     private static final int PERMISSIONS_REQUEST_CODE = 0;
-    private ArrayList<Mat> images;
+    public ArrayList<Mat> images;
     private ArrayList<String> imagesLabels;
     private String[] uniqueLabels;
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -114,6 +117,43 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
         mToast.show();
     }
 
+    private void showAlert(final String message, String method, final int param) {
+        if(method.equals("face_detected")) {
+            final Services services = new Services(FaceRecognitionActivity.this);
+            User user = services.FindUser(imagesLabels.get(param));
+            new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
+                    .setTitleText(message)
+                    .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
+                    .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+                        @Override
+                        public void onClick(SweetAlertDialog sDialog) {
+                            sDialog.dismissWithAnimation();
+                            if(services.FindPresence(imagesLabels.get(param)) != null){
+                                new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.ERROR_TYPE)
+                                        .setTitleText("User sudah absen")
+                                        .show();
+                            } else {
+                                services.Presence(imagesLabels.get(param), "FaceRecognition");
+                                new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.SUCCESS_TYPE)
+                                        .setTitleText("Absen Sukses")
+                                        .show();
+                            }
+                        }
+                    })
+                    .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
+                        @Override
+                        public void onClick(SweetAlertDialog sDialog) {
+                            sDialog.dismissWithAnimation();
+                        }
+                    })
+                    .show();
+        } else {
+            new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
+                    .setTitleText(message)
+                    .show();
+        }
+    }
+
     private void addLabel(String string) {
         String label = string.substring(0, 1).toUpperCase(Locale.US) + string.substring(1).trim().toLowerCase(Locale.US); // Make sure that the name is always uppercase and rest is lowercase
         imagesLabels.add(label); // Add label to list of labels
@@ -132,6 +172,7 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
 
         if (mTrainFacesTask != null && mTrainFacesTask.getStatus() != AsyncTask.Status.FINISHED) {
             Log.i(TAG, "mTrainFacesTask is still running");
+//            mTrainFacesTask.cancel(true);
             return false;
         }
 
@@ -197,7 +238,7 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
         if (!uniqueLabelsSet.isEmpty()) { // Make sure that there are any labels
             // Inspired by: http://stackoverflow.com/questions/15762905/how-can-i-display-a-list-view-in-an-android-alert-dialog
             AlertDialog.Builder builder = new AlertDialog.Builder(FaceRecognitionActivity.this);
-            builder.setTitle("Select label:");
+            builder.setTitle("List User Yang Sudah Di Register:");
             builder.setPositiveButton("New face", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -387,6 +428,8 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
             }
         });
 
+        Button button = findViewById(R.id.take_picture_button);
+        button.setText("Capture");
         findViewById(R.id.take_picture_button).setOnClickListener(new View.OnClickListener() {
             NativeMethods.MeasureDistTask mMeasureDistTask;
 
@@ -399,6 +442,8 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
                 }
                 if (mTrainFacesTask != null && mTrainFacesTask.getStatus() != AsyncTask.Status.FINISHED) {
                     Log.i(TAG, "mTrainFacesTask is still running");
+                    mTrainFacesTask.cancel(true);
+
                     showToast("Still training...", Toast.LENGTH_SHORT);
                     return;
                 }
@@ -477,17 +522,20 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
                     String faceDistString = String.format(Locale.US, "%.4f", faceDist);
 
                     if (faceDist < faceThreshold && minDist < distanceThreshold) { // 1. Near face space and near a face class
-                        showToast("Face detected: " + imagesLabels.get(minIndex) + ". Distance: " + minDistString, Toast.LENGTH_LONG);
-                        Services services = new Services(FaceRecognitionActivity.this);
-                        services.Presence(imagesLabels.get(minIndex), "FaceRecognition");
-
+//                        showToast("Face detected: " + imagesLabels.get(minIndex) + ". Distance: " + minDistString, Toast.LENGTH_LONG);
+                        showAlert("Konfirmasi Data", "face_detected", minIndex);
                     }
                     else if (faceDist < faceThreshold) // 2. Near face space but not near a known face class
-                        showToast("Unknown face. Face distance: " + faceDistString + ". Closest Distance: " + minDistString, Toast.LENGTH_LONG);
+                        showAlert("Data Tidak Ditemukan", "unknown", minIndex);
+//                        showToast("Unknown face. Face distance: " + faceDistString + ". Closest Distance: " + minDistString, Toast.LENGTH_LONG);
                     else if (minDist < distanceThreshold) // 3. Distant from face space and near a face class
-                        showToast("False recognition. Face distance: " + faceDistString + ". Closest Distance: " + minDistString, Toast.LENGTH_LONG);
+                        showAlert("Data Tidak Ditemukan", "unknown", minIndex);
+//                        showToast("False recognition. Face distance: " + faceDistString + ". Closest Distance: " + minDistString, Toast.LENGTH_LONG);
                     else // 4. Distant from face space and not near a known face class.
-                        showToast("Image is not a face. Face distance: " + faceDistString + ". Closest Distance: " + minDistString, Toast.LENGTH_LONG);
+                        showAlert("Data Tidak Ditemukan", "unknown", minIndex);
+//                        showToast("Image is not a face. Face distance: " + faceDistString + ". Closest Distance: " + minDistString, Toast.LENGTH_LONG);
+
+//                    images.remove(images.size() - 1); // Remove last image
                 }
             } else {
                 Log.w(TAG, "Array is null");

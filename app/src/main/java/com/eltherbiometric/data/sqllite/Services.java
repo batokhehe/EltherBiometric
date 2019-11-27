@@ -16,6 +16,58 @@ public class Services extends DBHandler {
         super(context);
     }
 
+    public com.eltherbiometric.data.model.User FindUser(String nik) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String selection = User.COLUMN_NIK + " = ?";
+        String[] selectionArgs = { String.valueOf(nik) };
+
+        Cursor cursor = db.query(
+                User.TABLE_NAME,
+                new String[]{User.COLUMN_NIK, User.COLUMN_NAME},
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null);
+        com.eltherbiometric.data.model.User user = new com.eltherbiometric.data.model.User();
+        if (cursor != null) {
+            cursor.moveToFirst();
+            user.setNik(cursor.getString(cursor.getColumnIndex(User.COLUMN_NIK)));
+            user.setName(cursor.getString(cursor.getColumnIndex(User.COLUMN_NAME)));
+
+        }
+        return user;
+    }
+
+    public com.eltherbiometric.data.model.Presence FindPresence(String nik) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        Date date = new Date();
+        String date_ = dateFormat.format(date);
+
+        String selection = Presence.COLUMN_NIK + " = ? AND " + Presence.COLUMN_DATE + " = ? ";
+        String[] selectionArgs = {String.valueOf(nik), String.valueOf(date_)};
+
+        Cursor cursor = db.query(
+                Presence.TABLE_NAME,
+                new String[]{Presence.COLUMN_NIK},
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null);
+        com.eltherbiometric.data.model.Presence presence = null;
+        if (cursor != null) {
+            cursor.moveToFirst();
+            presence = new com.eltherbiometric.data.model.Presence();
+            presence.setNik(cursor.getString(cursor.getColumnIndex(Presence.COLUMN_NIK)));
+
+        }
+        return presence;
+    }
+
     public void Save(String nik, String name) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
@@ -59,36 +111,34 @@ public class Services extends DBHandler {
     }
 
     public List<com.eltherbiometric.data.model.Presence> AllPresence() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        Date date = new Date();
+        String date_ = dateFormat.format(date);
+
         List<com.eltherbiometric.data.model.Presence> Datas = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT " +
+                Presence.TABLE_NAME + "." + Presence.COLUMN_NIK + ", " +
+                Presence.TABLE_NAME + "." + Presence.COLUMN_DATE + ", " +
+                Presence.TABLE_NAME + "." + Presence.COLUMN_TIME + ", " +
+                Presence.TABLE_NAME + "." + Presence.COLUMN_METHOD + ", " +
+                User.TABLE_NAME + "." + User.COLUMN_NAME + " " +
+                "FROM " +
+                Presence.TABLE_NAME + " " +
+                "JOIN " +
+                User.TABLE_NAME + " " +
+                "ON " + User.TABLE_NAME + "." + User.COLUMN_NIK + " = " + Presence.TABLE_NAME + "." + Presence.COLUMN_NIK + " " +
+                "WHERE " + Presence.TABLE_NAME + "." + Presence.COLUMN_DATE + " = ? ";
 
-        // Define a projection that specifies which columns from the database
-        // you will actually use after this query.
-        String[] projection = {
-                Presence.COLUMN_NIK,
-                Presence.COLUMN_DATE,
-                Presence.COLUMN_TIME,
-                Presence.COLUMN_METHOD
-        };
+        Cursor cursor = db.rawQuery(query,
+                new String[] {date_});
 
-        String sortOrder = null;
 
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        Cursor cursor = db.query(
-                Presence.TABLE_NAME,   // The table to query
-                projection,             // The array of columns to return (pass null to get All)
-                null,              // The columns for the WHERE clause
-                null,          // The values for the WHERE clause
-                null,                   // don't group the rows
-                null,                   // don't filter by row groups
-                sortOrder               // The sort order
-        );
-
-        // looping through All rows and adding to list
-        if (cursor.moveToFirst()) {
+        if (cursor != null && cursor.moveToFirst()) {
             do {
                 com.eltherbiometric.data.model.Presence presence = new com.eltherbiometric.data.model.Presence();
                 presence.setNik(cursor.getString(cursor.getColumnIndex(Presence.COLUMN_NIK)));
+                presence.setName(cursor.getString(cursor.getColumnIndex(User.COLUMN_NAME)));
                 presence.setDate(cursor.getString(cursor.getColumnIndex(Presence.COLUMN_DATE)));
                 presence.setTime(cursor.getString(cursor.getColumnIndex(Presence.COLUMN_TIME)));
                 presence.setMethod(cursor.getString(cursor.getColumnIndex(Presence.COLUMN_METHOD)));
@@ -96,10 +146,42 @@ public class Services extends DBHandler {
                 Datas.add(presence);
             } while (cursor.moveToNext());
         }
+        assert cursor != null;
         cursor.close();
-        // close db connection
-        db.close();
-        // return settings list
+        return Datas;
+    }
+
+    public List<com.eltherbiometric.data.model.Presence> AllAbsence() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        Date date = new Date();
+        String date_ = dateFormat.format(date);
+
+        List<com.eltherbiometric.data.model.Presence> Datas = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT " +
+                User.TABLE_NAME + "." + User.COLUMN_NIK + ", " +
+                User.TABLE_NAME + "." + User.COLUMN_NAME + " " +
+                "FROM " +
+                User.TABLE_NAME + " " +
+                "WHERE " + User.TABLE_NAME + "." + User.COLUMN_NIK + " NOT IN(" +
+                "SELECT " + Presence.TABLE_NAME + "." + Presence.COLUMN_NIK + " " +
+                "FROM " + Presence.TABLE_NAME + " " +
+                "WHERE " + Presence.TABLE_NAME + "." + Presence.COLUMN_DATE + "  = ? )";
+
+        Cursor cursor = db.rawQuery(query,
+                new String[] {date_});
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                com.eltherbiometric.data.model.Presence presence = new com.eltherbiometric.data.model.Presence();
+                presence.setNik(cursor.getString(cursor.getColumnIndex(User.COLUMN_NIK)));
+                presence.setName(cursor.getString(cursor.getColumnIndex(User.COLUMN_NAME)));
+
+                Datas.add(presence);
+            } while (cursor.moveToNext());
+        }
+        assert cursor != null;
+        cursor.close();
         return Datas;
     }
 }

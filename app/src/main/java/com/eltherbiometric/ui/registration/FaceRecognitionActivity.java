@@ -76,8 +76,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class FaceRecognitionActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -367,6 +369,7 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
                 if (mTrainFacesTask != null && mTrainFacesTask.getStatus() != AsyncTask.Status.FINISHED) {
                     Log.i(TAG, "mTrainFacesTask is still running");
                     showToast("Still training...", Toast.LENGTH_SHORT);
+                    mTrainFacesTask.cancel(true);
                     return;
                 }
 
@@ -411,9 +414,11 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
         next.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Services services = new Services(FaceRecognitionActivity.this);
-                services.Save(nik, name);
-                Intent intent = new Intent(FaceRecognitionActivity.this, MainActivity.class);
+//                Services services = new Services(FaceRecognitionActivity.this);
+//                services.Save(nik, name);
+                Intent intent = new Intent(FaceRecognitionActivity.this, FingerPrintActivity.class);
+                intent.putExtra("nik", nik);
+                intent.putExtra("name", name);
                 startActivity(intent);
                 finish();
             }

@@ -72,6 +72,7 @@ public final class OcrActivity extends AppCompatActivity {
     private TextToSpeech tts;
     private Button buttonCapture;
 
+    public final Pattern numberPattern = Pattern.compile(".*[0-9].*");
     public final Pattern textPattern = Pattern.compile(".*[a-z].*");
 
     /**
@@ -135,7 +136,10 @@ public final class OcrActivity extends AppCompatActivity {
         ArrayList<String> tmp = new ArrayList<>();
 
         for (String msg: messages) {
-            if (textPattern.matcher(msg).matches() || msg.equals("NIK")){
+            if(numberPattern.matcher(msg).matches()){
+                tmp.add(msg);
+                Log.d(TAG, "nextActivity: " + tmp.indexOf(msg) + " : " + msg);
+            } else if (textPattern.matcher(msg).matches() || msg.equals("NIK") || msg.contains("RT")|| msg.contains("RW")){
             } else {
                 tmp.add(msg);
                 Log.d(TAG, "nextActivity: " + tmp.indexOf(msg) + " : " + msg);

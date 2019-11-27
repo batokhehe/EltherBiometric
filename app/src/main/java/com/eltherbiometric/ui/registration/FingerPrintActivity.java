@@ -1,4 +1,4 @@
-package com.eltherbiometric.ui.fingerprint;
+package com.eltherbiometric.ui.registration;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -14,6 +14,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.eltherbiometric.R;
+import com.eltherbiometric.ui.fingerprint.MatchActivity;
+import com.eltherbiometric.ui.fingerprint.ProcessFingerprintRegisterActivity;
 import com.eltherbiometric.ui.fingerprint.utils.AppJavaCameraView;
 import com.eltherbiometric.ui.fingerprint.utils.AppUtils;
 import com.orhanobut.hawk.Hawk;
@@ -44,6 +46,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
 
     private static final String TAG = "FingerPrintActivity";
     private static HashMap<String, Mat> processedImages;
+    private String nik, name;
 
     // endregion Private Variables
 
@@ -99,13 +102,13 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
      */
     public static void addProcessedImage(Mat image, String name) {
         processedImages.put(name, image);
-//        Hawk.put("eltherfp", processedImages);
-//        HashMap<String, Mat> temp = Hawk.get("eltherfp");
-//        if (temp != null) {
-//            if (temp.size() > 0){
-//                Log.d(TAG, "addProcessedImage: " + temp.size());
-//            }
-//        }
+        Hawk.put("eltherfp", processedImages);
+        HashMap<String, Mat> temp = Hawk.get("eltherfp");
+        if (temp != null) {
+            if (temp.size() > 0){
+                Log.d(TAG, "addProcessedImage: " + temp.size());
+            }
+        }
     }
 
     /**
@@ -154,8 +157,20 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
+        if (savedInstanceState == null) {
+            Bundle extras = getIntent().getExtras();
+            if(extras == null) {
+                nik = null;
+                name = null;
+            } else {
+                nik= extras.getString("nik");
+                name= extras.getString("name");
+            }
+        } else {
+            nik = (String) savedInstanceState.getSerializable("nik");
+            name = (String) savedInstanceState.getSerializable("name");
+        }
         initialize();
     }
 
@@ -243,7 +258,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
 
     public boolean onTouch(View v, MotionEvent event) {
 
-        cameraView_OnTouch(v, event);
+//        cameraView_OnTouch(v, event);
         return false;
     }
 
@@ -266,7 +281,9 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     private void buttonProcess_OnClick(View view) {
 
         // navigate to Process activity
-        Intent intent = new Intent(this, ProcessActivity.class);
+        Intent intent = new Intent(this, ProcessFingerprintRegisterActivity.class);
+        intent.putExtra("nik", nik);
+        intent.putExtra("name", name);
         this.startActivity(intent);
     }
 
@@ -303,8 +320,8 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         Mat snapShot = takeSnapShort();
         int rows = snapShot.rows();
         int cols = snapShot.cols();
-        ProcessActivity.MatSnapShot = snapShot;
-        ProcessActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
+        ProcessFingerprintRegisterActivity.MatSnapShot = snapShot;
+        ProcessFingerprintRegisterActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
         MatchActivity.MatMatchMask = snapShotMask(rows, cols, 20);
 
         // set it to the imageView
@@ -320,8 +337,8 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         Mat snapShot = takeSnapShort();
         int rows = snapShot.rows();
         int cols = snapShot.cols();
-        ProcessActivity.MatSnapShot = snapShot;
-        ProcessActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
+        ProcessFingerprintRegisterActivity.MatSnapShot = snapShot;
+        ProcessFingerprintRegisterActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
         MatchActivity.MatMatchMask = snapShotMask(rows, cols, 20);
 
         // set it to the imageView
@@ -341,7 +358,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
      */
     private void initialize() {
 
-        setContentView(R.layout.activity_fingerprint_camera_presence);
+        setContentView(R.layout.activity_fingerprint_camera_registration);
 
         // disable screen sleep
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -351,13 +368,13 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
 
         // processed images
         processedImages = new HashMap<String, Mat>();
-//        HashMap<String, Mat> temp = Hawk.get("eltherfp");
-//        if (temp != null) {
-//            if (temp.size() > 0){
-//                processedImages.putAll(temp);
-//                Log.d(TAG, "initialize: " + temp.size());
-//            }
-//        }
+        HashMap<String, Mat> temp = Hawk.get("eltherfp");
+        if (temp != null) {
+            if (temp.size() > 0){
+                processedImages.putAll(temp);
+                Log.d(TAG, "initialize: " + temp.size());
+            }
+        }
 
         // get views
 //        textViewCounter = (TextView) findViewById(R.id.cameraTextViewCounter);

@@ -58,4 +58,6 @@
     <string name="tab_text_2">Absen</string>
     <string name="presensi">Presensi</string>
     <string name="select_method">Pilih Metode</string>
+    <string name="company">SGP</string>
+    <string name="db_manager">DB Manager</string>
 </resources>

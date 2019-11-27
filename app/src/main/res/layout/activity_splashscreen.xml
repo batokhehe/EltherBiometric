@@ -8,7 +8,8 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/black">
 
         <ImageView
             android:id="@+id/ivLogo"
@@ -23,9 +24,19 @@
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
             android:text="@string/app_name"
-            android:textColor="@color/black"
+            android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvCompany"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/tvVersion"
+            android:layout_centerHorizontal="true"
+            android:text="@string/company"
+            android:textColor="@color/white"
+            android:textSize="14sp"/>
 
         <TextView
             android:id="@+id/tvVersion"
@@ -33,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:layout_centerHorizontal="true"
-            android:textColor="@color/black"
+            android:textColor="@color/white"
             android:textSize="14sp"/>
 
     </RelativeLayout>

@@ -7,6 +7,7 @@ import androidx.cardview.widget.CardView;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,8 +21,15 @@ import com.eltherbiometric.ui.login.LoginActivity;
 import com.eltherbiometric.ui.ocr.OcrActivity;
 import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
 import com.eltherbiometric.ui.upload.UploadActivity;
+import com.eltherbiometric.utils.AndroidDatabaseManager;
 import com.eltherbiometric.utils.Config;
 import com.orhanobut.hawk.Hawk;
+
+import org.opencv.core.Mat;
+
+import java.util.HashMap;
+
+import cn.pedant.SweetAlert.SweetAlertDialog;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -32,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private AlertDialog.Builder dialog;
     private LayoutInflater inflater;
     private View dialogView;
+    private String insert;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +48,30 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Hawk.init(MainActivity.this).build();
+
+        // processed images
+        HashMap<String, Mat> temp = Hawk.get("eltherfp");
+        if (temp != null) {
+            if (temp.size() > 0){
+                Log.d("FingerPrintActivity", "initialize Main Activity: " + temp.size());
+            }
+        }
+
+        if (savedInstanceState == null) {
+            Bundle extras = getIntent().getExtras();
+            if(extras == null) {
+                insert = null;
+            } else {
+                insert = extras.getString("insert");
+                if (insert.equals("success")){
+                    new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE)
+                            .setTitleText("Registrasi Sukses")
+                            .show();
+                }
+            }
+        } else {
+            insert = (String) savedInstanceState.getSerializable("insert");
+        }
 
         initComponents();
         initEvents();
@@ -123,6 +156,9 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             case R.id.setting:
                 showSettingDialog();
+            case R.id.db_manager:
+                Intent intent1 = new Intent(MainActivity.this, AndroidDatabaseManager.class);
+                startActivity(intent1);
         }
 
         return super.onOptionsItemSelected(item);

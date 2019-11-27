@@ -1,25 +1,24 @@
 package com.eltherbiometric.ui.fingerprint;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import com.eltherbiometric.MainActivity;
 import com.eltherbiometric.R;
+import com.eltherbiometric.data.sqllite.Services;
 import com.eltherbiometric.ui.fingerprint.utils.ImageSaver;
+import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
+import com.eltherbiometric.ui.registration.FingerPrintActivity;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
@@ -38,7 +37,7 @@ import java.util.Collections;
 /**
  * Process the image to extract skeleton from it.
  */
-public class ProcessActivity extends Activity {
+public class ProcessFingerprintRegisterActivity extends Activity {
 
     // region Public Static Members
 
@@ -69,7 +68,7 @@ public class ProcessActivity extends Activity {
 
     // region Constructor
 
-    public ProcessActivity() {
+    public ProcessFingerprintRegisterActivity() {
 
 
     }
@@ -126,22 +125,7 @@ public class ProcessActivity extends Activity {
      * @param view
      */
     private void buttonSave_OnClick(View view) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater = this.getLayoutInflater();
-        View layout = inflater.inflate(R.layout.processdialogview, null);
-        final TextView textView = (TextView) layout.findViewById(R.id.processDialogViewTextView);
-        builder.setView(layout);
-        builder.setTitle("Image Name");
-        builder.setNegativeButton("Cancel", null);
-        builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                String imageName = textView.getText().toString();
-                FingerPrintActivity.addProcessedImage(matResult, imageName);
-            }
-        });
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
+        com.eltherbiometric.ui.registration.FingerPrintActivity.addProcessedImage(matResult, nik);
     }
 
     /**
@@ -149,67 +133,67 @@ public class ProcessActivity extends Activity {
      *
      * @param view
      */
-    private void buttonQuery_OnClick(View view) {
-
-        // navigate to match activity
-        MatchActivity.MatQuery = matResult;
-        Intent intent = new Intent(this, MatchActivity.class);
-        this.startActivity(intent);
-    }
-
-    /**
-     * Navigate to Settings activity.
-     *
-     * @param view
-     */
-    private void buttonSettings_OnClick(View view) {
-
-        // navigate to Settings activity
-//        Intent intent = new Intent(this, SettingsActivity.class);
+//    private void buttonQuery_OnClick(View view) {
+//
+//        // navigate to match activity
+//        MatchActivity.MatQuery = matResult;
+//        Intent intent = new Intent(this, MatchActivity.class);
 //        this.startActivity(intent);
-    }
-
-    /**
-     * Show original image.
-     *
-     * @param view
-     */
-    private void buttonOriginal_OnClick(View view) {
-
-        this.showImage(MatSnapShot);
-    }
-
-    /**
-     * Show orientation image.
-     *
-     * @param view
-     */
-    private void buttonOrient_OnClick(View view) {
-
-        this.showImage(matRidgeOrientation);
-    }
-
-    /**
-     * Show filter image.
-     *
-     * @param view
-     */
-    private void buttonFilter_OnClick(View view) {
-
-        this.showImage(matRidgeFilter);
-
-    }
-
-    /**
-     * Show enhanced image.
-     *
-     * @param view
-     */
-    private void buttonEnhanced_OnClick(View view) {
-
-        this.showImage(matEnhanced);
-
-    }
+//    }
+//
+//    /**
+//     * Navigate to Settings activity.
+//     *
+//     * @param view
+//     */
+//    private void buttonSettings_OnClick(View view) {
+//
+//        // navigate to Settings activity
+////        Intent intent = new Intent(this, SettingsActivity.class);
+////        this.startActivity(intent);
+//    }
+//
+//    /**
+//     * Show original image.
+//     *
+//     * @param view
+//     */
+//    private void buttonOriginal_OnClick(View view) {
+//
+//        this.showImage(MatSnapShot);
+//    }
+//
+//    /**
+//     * Show orientation image.
+//     *
+//     * @param view
+//     */
+//    private void buttonOrient_OnClick(View view) {
+//
+//        this.showImage(matRidgeOrientation);
+//    }
+//
+//    /**
+//     * Show filter image.
+//     *
+//     * @param view
+//     */
+//    private void buttonFilter_OnClick(View view) {
+//
+//        this.showImage(matRidgeFilter);
+//
+//    }
+//
+//    /**
+//     * Show enhanced image.
+//     *
+//     * @param view
+//     */
+//    private void buttonEnhanced_OnClick(View view) {
+//
+//        this.showImage(matEnhanced);
+//
+//    }
 
     // endregion Private Event Handlers
 
@@ -220,7 +204,7 @@ public class ProcessActivity extends Activity {
      */
     private void initialize() {
 
-        setContentView(R.layout.process);
+        setContentView(R.layout.activity_fingerprint_process_registration);
 
         // convert to bitmap and show
         imageViewSource = (ImageView) this.findViewById(R.id.processImageViewSource);
@@ -237,65 +221,67 @@ public class ProcessActivity extends Activity {
         progressBar = findViewById(R.id.progressBar);
 
         // event handlers
-//        Button btnNext = findViewById(R.id.btnNext);
-//        btnNext.setOnClickListener(new View.OnClickListener() {
+        Button btnNext = findViewById(R.id.btnNext);
+        btnNext.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                FingerPrintActivity.addProcessedImage(matResult, nik);
+                Services services = new Services(ProcessFingerprintRegisterActivity.this);
+                services.Save(nik, name);
+                Intent intent = new Intent(ProcessFingerprintRegisterActivity.this, MainActivity.class);
+                intent.putExtra("insert", "success");
+                startActivity(intent);
+            }
+        });
+//        Button buttonSave = (Button) findViewById(R.id.processButtonSave);
+//        buttonSave.setOnClickListener(new View.OnClickListener() {
 //            @Override
 //            public void onClick(View view) {
-//                FingerPrintActivity.addProcessedImage(matResult, nik);
-//
-//                Intent intent = new Intent(ProcessActivity.this, MainActivity.class);
-//                startActivity(intent);
+//                buttonSave_OnClick(view);
 //            }
 //        });
-        Button buttonSave = (Button) findViewById(R.id.processButtonSave);
-        buttonSave.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonSave_OnClick(view);
-            }
-        });
-        Button buttonQuery = (Button) findViewById(R.id.processButtonQuery);
-        buttonQuery.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonQuery_OnClick(view);
-            }
-        });
-        Button buttonSettings = (Button) findViewById(R.id.processButtonSettings);
-        buttonSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonSettings_OnClick(view);
-            }
-        });
-        Button buttonOriginal = (Button) findViewById(R.id.processButtonOriginal);
-        buttonOriginal.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonOriginal_OnClick(view);
-            }
-        });
-        Button buttonOrient = (Button) findViewById(R.id.processButtonOrient);
-        buttonOrient.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonOrient_OnClick(view);
-            }
-        });
-        Button buttonFilter = (Button) findViewById(R.id.processButtonFilter);
-        buttonFilter.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonFilter_OnClick(view);
-            }
-        });
-        Button buttonEnhanced = (Button) findViewById(R.id.processButtonEnhanced);
-        buttonEnhanced.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                buttonEnhanced_OnClick(view);
-            }
-        });
+//        Button buttonQuery = (Button) findViewById(R.id.processButtonQuery);
+//        buttonQuery.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                buttonQuery_OnClick(view);
+//            }
+//        });
+//        Button buttonSettings = (Button) findViewById(R.id.processButtonSettings);
+//        buttonSettings.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                buttonSettings_OnClick(view);
+//            }
+//        });
+//        Button buttonOriginal = (Button) findViewById(R.id.processButtonOriginal);
+//        buttonOriginal.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                buttonOriginal_OnClick(view);
+//            }
+//        });
+//        Button buttonOrient = (Button) findViewById(R.id.processButtonOrient);
+//        buttonOrient.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                buttonOrient_OnClick(view);
+//            }
+//        });
+//        Button buttonFilter = (Button) findViewById(R.id.processButtonFilter);
+//        buttonFilter.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                buttonFilter_OnClick(view);
+//            }
+//        });
+//        Button buttonEnhanced = (Button) findViewById(R.id.processButtonEnhanced);
+//        buttonEnhanced.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                buttonEnhanced_OnClick(view);
+//            }
+//        });
 
         Button processButtonSaveStorage = findViewById(R.id.processButtonSaveStorage);
         processButtonSaveStorage.setOnClickListener(new View.OnClickListener() {
