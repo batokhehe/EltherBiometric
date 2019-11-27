@@ -12,7 +12,7 @@ INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml:2:1-
 		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 	android:versionName
-		ADDED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml:5:7-34
+		ADDED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml:5:7-38
 		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 	xmlns:android
@@ -20,4 +20,18 @@ INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml:2:1-
 	android:versionCode
 		ADDED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml:4:7-33
 		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+uses-sdk
+INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+		ADDED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+		ADDED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 		INJECTED from E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml

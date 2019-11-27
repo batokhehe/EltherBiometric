@@ -4,7 +4,7 @@ include $(CLEAR_VARS)
 
 
 OPENCV_INSTALL_MODULES := on
-include $(LOCAL_PATH)/../../../../OpenCV-android-sdk/sdk/native/jni/OpenCV.mk
+include $(LOCAL_PATH)/../../../../opencv3-android-sdk-with-contrib-fix-surf-sift/OpenCV-android-sdk/sdk/native/jni/OpenCV.mk
 
 
 LOCAL_MODULE := face-lib
