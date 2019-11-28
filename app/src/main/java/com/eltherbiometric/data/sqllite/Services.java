@@ -59,11 +59,10 @@ public class Services extends DBHandler {
                 null,
                 null);
         com.eltherbiometric.data.model.Presence presence = null;
-        if (cursor != null) {
-            cursor.moveToFirst();
+        if (cursor != null && cursor.moveToFirst()) {
             presence = new com.eltherbiometric.data.model.Presence();
             presence.setNik(cursor.getString(cursor.getColumnIndex(Presence.COLUMN_NIK)));
-
+            cursor.close();
         }
         return presence;
     }
