@@ -1,4 +1,4 @@
-package com.eltherbiometric.ui.registration;
+package com.eltherbiometric.ui.presence;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -11,12 +11,11 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.eltherbiometric.R;
 import com.eltherbiometric.ui.facerecog.TinyDB;
-import com.eltherbiometric.ui.fingerprint.MatchActivity;
-import com.eltherbiometric.ui.fingerprint.ProcessFingerprintRegisterActivity;
+import com.eltherbiometric.ui.fingerprint.MatchFingerprintPresenceActivity;
+import com.eltherbiometric.ui.fingerprint.ProcessFingerprintPresenceActivity;
 import com.eltherbiometric.ui.fingerprint.utils.AppJavaCameraView;
 import com.eltherbiometric.ui.fingerprint.utils.AppUtils;
 import com.eltherbiometric.utils.Config;
@@ -48,7 +47,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     // region Private Static Variables
 
     private static final String TAG = "FingerPrintActivity";
-    private String nik, name;
+    private static TinyDB tinydb;
 
     // endregion Private Variables
 
@@ -61,7 +60,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     private android.hardware.Camera.Size cameraSize;
     private int maskWidth;
     private int maskHeight;
-    private static TinyDB tinydb;
+    private Mat imageMat;
 
     // endregion Private Variables
 
@@ -74,6 +73,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
                 case LoaderCallbackInterface.SUCCESS: {
                     cameraView.enableView();
 //                    cameraView.setOnTouchListener(FingerPrintActivity.this);
+                    imageMat = new Mat();
                 }
                 break;
                 default: {
@@ -115,13 +115,10 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         Hawk.put("name_list", name_list);
 //        tinydb.matToJson(name + "_fingerprint_images", image);
         tinydb.matToJson(name, image);
-//        Hawk.put("eltherfp", Config.processedImages);
-//        HashMap<String, Mat> temp = Hawk.get("eltherfp");
-//        if (temp != null) {
-//            if (temp.size() > 0){
-//                Log.d(TAG, "addProcessedImage: " + temp.size());
-//            }
-//        }
+        Log.d(TAG, "addProcessedImage Put Image Mat " + name + " : " + image);
+        Mat temp = tinydb.matFromJson(name);
+//        Mat temp = tinydb.matFromJson(name + "_fingerprint_images");
+        Log.d(TAG, "addProcessedImage Get Image Mat " + name + " : " + temp);
     }
 
     /**
@@ -171,20 +168,19 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState == null) {
-            Bundle extras = getIntent().getExtras();
-            if(extras == null) {
-                nik = null;
-                name = null;
-            } else {
-                nik= extras.getString("nik");
-                name= extras.getString("name");
-            }
-        } else {
-            nik = (String) savedInstanceState.getSerializable("nik");
-            name = (String) savedInstanceState.getSerializable("name");
+        setContentView(R.layout.activity_fingerprint_camera_presence);
+        imageView = (ImageView) findViewById(R.id.cameraImageView);
+        cameraView = (AppJavaCameraView) findViewById(R.id.cameraCameraView);
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("OpenCV", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+//            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
         }
-        tinydb = new TinyDB(this);
+        else {
+            Log.d("OpenCV", "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+
+        tinydb = new TinyDB(this); // Used to store ArrayLists in the shared preferences
         initialize();
     }
 
@@ -215,6 +211,14 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     public void onResume() {
 
         super.onResume();
+
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("OpenCV", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+//            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        } else {
+            Log.d("OpenCV", "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
 
         //re-load openCV - openCV integration WITH openCV manager
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
@@ -272,7 +276,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
 
     public boolean onTouch(View v, MotionEvent event) {
 
-//        cameraView_OnTouch(v, event);
+        cameraView_OnTouch(v, event);
         return false;
     }
 
@@ -295,9 +299,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     private void buttonProcess_OnClick(View view) {
 
         // navigate to Process activity
-        Intent intent = new Intent(this, ProcessFingerprintRegisterActivity.class);
-        intent.putExtra("nik", nik);
-        intent.putExtra("name", name);
+        Intent intent = new Intent(this, ProcessFingerprintPresenceActivity.class);
         this.startActivity(intent);
     }
 
@@ -334,9 +336,9 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         Mat snapShot = takeSnapShort();
         int rows = snapShot.rows();
         int cols = snapShot.cols();
-        ProcessFingerprintRegisterActivity.MatSnapShot = snapShot;
-        ProcessFingerprintRegisterActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
-        MatchActivity.MatMatchMask = snapShotMask(rows, cols, 20);
+        ProcessFingerprintPresenceActivity.MatSnapShot = snapShot;
+        ProcessFingerprintPresenceActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
+        MatchFingerprintPresenceActivity.MatMatchMask = snapShotMask(rows, cols, 20);
 
         // set it to the imageView
         imageView.setImageBitmap(matToBitmap(snapShot));
@@ -351,9 +353,9 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         Mat snapShot = takeSnapShort();
         int rows = snapShot.rows();
         int cols = snapShot.cols();
-        ProcessFingerprintRegisterActivity.MatSnapShot = snapShot;
-        ProcessFingerprintRegisterActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
-        MatchActivity.MatMatchMask = snapShotMask(rows, cols, 20);
+        ProcessFingerprintPresenceActivity.MatSnapShot = snapShot;
+        ProcessFingerprintPresenceActivity.MatSnapShotMask = snapShotMask(rows, cols, 10);
+        MatchFingerprintPresenceActivity.MatMatchMask = snapShotMask(rows, cols, 20);
 
         // set it to the imageView
         imageView.setImageBitmap(matToBitmap(snapShot));
@@ -361,6 +363,9 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         // show imageView and hide cameraView
         cameraView.setVisibility(View.INVISIBLE);
         imageView.setVisibility(View.VISIBLE);
+
+        Button buttonProcess = (Button) findViewById(R.id.cameraButtonProcess);
+        buttonProcess_OnClick(buttonProcess);
     }
 
     // endregion Private Event Handlers
@@ -372,8 +377,6 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
      */
     private void initialize() {
 
-        setContentView(R.layout.activity_fingerprint_camera_registration);
-
         // disable screen sleep
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -382,18 +385,9 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
 
         // processed images
         if(Config.processedImages == null) Config.processedImages = new HashMap<String, Mat>();
-//        HashMap<String, Mat> temp = Hawk.get("eltherfp");
-//        if (temp != null) {
-//            if (temp.size() > 0){
-//                Config.processedImages.putAll(temp);
-//                Log.d(TAG, "initialize: " + temp.size());
-//            }
-//        }
 
         // get views
 //        textViewCounter = (TextView) findViewById(R.id.cameraTextViewCounter);
-        imageView = (ImageView) findViewById(R.id.cameraImageView);
-        cameraView = (AppJavaCameraView) findViewById(R.id.cameraCameraView);
 
         // adjust camera view
         cameraView.setCvCameraViewListener(this);

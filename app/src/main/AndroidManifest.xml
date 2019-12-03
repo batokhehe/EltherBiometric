@@ -91,6 +91,19 @@
             android:name=".ui.fingerprint.ProcessFingerprintRegisterActivity"
             android:screenOrientation="portrait" />
 
+        <!-- Presence Fingerprint -->
+        <activity
+            android:name=".ui.presence.FingerPrintActivity"
+            android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".ui.fingerprint.ProcessFingerprintPresenceActivity"
+            android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".ui.fingerprint.MatchFingerprintPresenceActivity"
+            android:screenOrientation="landscape" />
+
 
         <!-- DB MANAGER -->
         <activity

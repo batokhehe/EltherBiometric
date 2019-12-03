@@ -16,7 +16,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eltherbiometric.ui.fingerprint.FingerPrintActivity;
+import com.eltherbiometric.ui.facerecog.TinyDB;
+import com.eltherbiometric.ui.presence.FingerPrintActivity;
 import com.eltherbiometric.ui.login.LoginActivity;
 import com.eltherbiometric.ui.ocr.OcrActivity;
 import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
@@ -26,8 +27,12 @@ import com.eltherbiometric.utils.Config;
 import com.orhanobut.hawk.Hawk;
 
 import org.opencv.core.Mat;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 
 import java.util.HashMap;
+import java.util.List;
 
 import cn.pedant.SweetAlert.SweetAlertDialog;
 
@@ -41,6 +46,27 @@ public class MainActivity extends AppCompatActivity {
     private LayoutInflater inflater;
     private View dialogView;
     private String insert;
+    private TinyDB tinydb;
+    private Mat imageMat;
+
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS: {
+//                    cameraView.enableView();
+//                    cameraView.setOnTouchListener(FingerPrintActivity.this);
+                    imageMat = new Mat();
+                }
+                break;
+                default: {
+                    super.onManagerConnected(status);
+                }
+                break;
+            }
+        }
+    };
+    private String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,11 +75,27 @@ public class MainActivity extends AppCompatActivity {
 
         Hawk.init(MainActivity.this).build();
 
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("OpenCV", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+//            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        }
+        else {
+            Log.d("OpenCV", "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+
         // processed images
-        HashMap<String, Mat> temp = Hawk.get("eltherfp");
-        if (temp != null) {
-            if (temp.size() > 0){
-                Log.d("FingerPrintActivity", "initialize Main Activity: " + temp.size());
+        tinydb = new TinyDB(this); // Used to store ArrayLists in the shared preferences
+        if(Config.processedImages == null) Config.processedImages = new HashMap<String, Mat>();
+        List<String> name_list = Hawk.get("name_list");
+        if (name_list != null) {
+            if (name_list.size() > 0){
+                Log.d(TAG, "name List: " + name_list.size());
+                for (String name: name_list) {
+                    imageMat = tinydb.matFromJson(name);
+                    Log.d(TAG, "initialize Image Mat " + name + " : " + imageMat);
+                    Config.processedImages.put(name, imageMat);
+                }
             }
         }
 
@@ -193,5 +235,17 @@ public class MainActivity extends AppCompatActivity {
 
         final AlertDialog alertDialog = alertDialogBuilderUserInput.create();
         alertDialog.show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("OpenCV", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+//            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        } else {
+            Log.d("OpenCV", "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
     }
 }

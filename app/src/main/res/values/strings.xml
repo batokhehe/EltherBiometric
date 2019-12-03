@@ -60,4 +60,5 @@
     <string name="select_method">Pilih Metode</string>
     <string name="company">SGP</string>
     <string name="db_manager">DB Manager</string>
+    <string name="submit">Submit</string>
 </resources>

@@ -35,8 +35,13 @@ import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -50,6 +55,7 @@ import java.util.Map;
 
 public class TinyDB {
 
+    private static String TAG = "TinyDB";
     private SharedPreferences preferences;
     private String DEFAULT_APP_IMAGEDATA_DIRECTORY;
     private String lastImagePath = "";
@@ -333,6 +339,20 @@ public class TinyDB {
         return objects;
     }
 
+    public Mat getMat(String key){
+        String objStrings = getString(key);
+        byte[] bytes_ = Base64.decode(objStrings, Base64.DEFAULT);
+        MatOfByte bytes = new MatOfByte(bytes_);
+        Mat desc  = new Mat(bytes.rows() * bytes.cols() * bytes.channels(), 1, bytes.type());
+        bytes.convertTo(desc, bytes.type());
+
+        desc = desc.reshape(bytes.channels(), bytes.rows());
+//        byte[] data = Base64.decode(objStrings, Base64.DEFAULT);
+//        Mat mat = new Mat(data.length, 1, CvType.CV_8U);
+//        mat.put(0, 0, data);
+        return desc;
+    }
+
 //    public ArrayList<Object> getListObject(String key, Class<?> mClass){
 //    	Gson gson = new Gson();
 //
@@ -427,7 +447,7 @@ public class TinyDB {
      * @param key SharedPreferences key
      * @param value String value to be added
      */
-    public void putString(String key, String value) {
+    public void putStringSingle(String key, String value) {
         checkForNullKey(key); checkForNullValue(value);
         preferences.edit().putString(key, value).apply();
     }
@@ -441,6 +461,11 @@ public class TinyDB {
         checkForNullKey(key);
         String[] myStringList = stringList.toArray(new String[stringList.size()]);
         preferences.edit().putString(key, TextUtils.join("‚‗‚", myStringList)).apply();
+    }
+
+    public void putString(String key, String stringList) {
+        checkForNullKey(key);
+        preferences.edit().putString(key, stringList).apply();
     }
 
     /**
@@ -486,6 +511,72 @@ public class TinyDB {
         }
         putListString(key, objStrings);
     }
+
+    public void putMat(String key, Mat obj){
+        checkForNullKey(key);
+
+        MatOfByte bytes = new MatOfByte(obj.reshape(1, obj.rows() * obj.cols() * obj.channels()));
+        byte[] bytes_ = bytes.toArray();
+
+        String dataString = Base64.encodeToString(bytes_, Base64.DEFAULT);
+
+//        int size = (int) (obj.total() * obj.channels());
+//        byte[] data = new byte[size];
+//        obj.get(0, 0, data);
+//        String dataString = new String(Base64.encode(data, Base64.DEFAULT));
+        putStringSingle(key, dataString);
+    }
+
+    public void matToJson(String key, Mat mat){
+        JsonObject obj = new JsonObject();
+
+        if(mat.isContinuous()){
+            int cols = mat.cols();
+            int rows = mat.rows();
+            int elemSize = (int) mat.elemSize();
+
+            byte[] data = new byte[cols * rows * elemSize];
+
+            mat.get(0, 0, data);
+
+            obj.addProperty("rows", mat.rows());
+            obj.addProperty("cols", mat.cols());
+            obj.addProperty("type", mat.type());
+
+            // We cannot set binary data to a json object, so:
+            // Encoding data byte array to Base64.
+            String dataString = new String(Base64.encode(data, Base64.DEFAULT));
+
+            obj.addProperty("data", dataString);
+
+            Gson gson = new Gson();
+            String json = gson.toJson(obj);
+
+//            return json;
+            putStringSingle(key, json);
+        } else {
+            Log.e(TAG, "Mat not continuous.");
+        }
+    }
+
+    public Mat matFromJson(String key){
+        String json = getString(key);
+        JsonParser parser = new JsonParser();
+        JsonObject JsonObject = parser.parse(json).getAsJsonObject();
+
+        int rows = JsonObject.get("rows").getAsInt();
+        int cols = JsonObject.get("cols").getAsInt();
+        int type = JsonObject.get("type").getAsInt();
+
+        String dataString = JsonObject.get("data").getAsString();
+        byte[] data = Base64.decode(dataString.getBytes(), Base64.DEFAULT);
+
+        Mat mat = new Mat(rows, cols, type);
+        mat.put(0, 0, data);
+
+        return mat;
+    }
+
 
     /**
      * Put ObJect any type into SharedPrefrences with 'key' and save
