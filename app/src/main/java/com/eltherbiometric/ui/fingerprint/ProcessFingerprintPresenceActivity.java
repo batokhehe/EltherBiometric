@@ -21,22 +21,36 @@ import com.eltherbiometric.R;
 import com.eltherbiometric.data.model.User;
 import com.eltherbiometric.data.sqllite.Services;
 import com.eltherbiometric.ui.fingerprint.utils.ImageSaver;
+import com.eltherbiometric.ui.ocr.GraphicOverlay;
 import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
 import com.eltherbiometric.ui.presence.FingerPrintActivity;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.features2d.DescriptorExtractor;
+import org.opencv.features2d.DescriptorMatcher;
+import org.opencv.features2d.FeatureDetector;
+import org.opencv.features2d.Features2d;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 import cn.pedant.SweetAlert.SweetAlertDialog;
 
@@ -69,6 +83,9 @@ public class ProcessFingerprintPresenceActivity extends Activity {
     private Mat matEnhanced;
     private Mat matResult;
     private String nik, name;
+    public static Mat MatQuery;
+    public static double MatchingThreshold = 45;
+    private ArrayList<Bitmap> matchResults;
 
     //endregion Private Variables
 
@@ -157,9 +174,161 @@ public class ProcessFingerprintPresenceActivity extends Activity {
     private void buttonQuery_OnClick(View view) {
 
         // navigate to match activity
-        MatchFingerprintPresenceActivity.MatQuery = matResult;
-        Intent intent = new Intent(this, MatchFingerprintPresenceActivity.class);
-        this.startActivity(intent);
+        MatQuery = matResult;
+//        Intent intent = new Intent(this, MatchFingerprintPresenceActivity.class);
+//        this.startActivity(intent);
+
+        processMatching();
+    }
+
+    private void processMatching() {
+
+        // loop on all the target images, do matching and get score
+        // also get the index of the max score
+        int count = com.eltherbiometric.ui.fingerprint.FingerPrintActivity.processedImageCount();
+        Object[] names = com.eltherbiometric.ui.fingerprint.FingerPrintActivity.getProcessedImageNames();
+        final HashMap<String, Integer> scores = new HashMap<String, Integer>(count);
+        int[] scoreValues = new int[count];
+        int maxIndex = 0;
+        for (int i = 0; i < count; i++) {
+            scoreValues[i] = matching(MatQuery, com.eltherbiometric.ui.fingerprint.FingerPrintActivity.getProcessedImage(i));
+            if (scoreValues[i] > scoreValues[maxIndex]) {
+                maxIndex = i;
+            }
+            scores.put(names[i].toString(), scoreValues[i]);
+        }
+
+
+//        if (scoreValues.length != 0) {
+//            return;
+//        }
+
+        // now, show message box with decision, if max score > min accepted score, then
+        // declare a winner, else: say than no match found
+        String title = scoreValues[maxIndex] > 15
+                ? names[maxIndex].toString()
+                : "not_detected";
+        showAlert(title, "FingerprintRecognition", 0);
+    }
+
+    private void showAlert(final String nik, String method, final int param) {
+        if(!method.equals("not_detected")) {
+            final Services services = new Services(ProcessFingerprintPresenceActivity.this);
+            User user = services.FindUser(nik);
+            new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
+                    .setTitleText("Konfirmasi Data")
+                    .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
+                    .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+                        @Override
+                        public void onClick(SweetAlertDialog sDialog) {
+                            sDialog.dismissWithAnimation();
+                            if(services.FindPresence(nik) != null){
+                                new SweetAlertDialog(ProcessFingerprintPresenceActivity.this, SweetAlertDialog.ERROR_TYPE)
+                                        .setTitleText("User sudah absen")
+                                        .show();
+                            } else {
+                                services.Presence(nik, "FingerprintRecognition");
+                                new SweetAlertDialog(ProcessFingerprintPresenceActivity.this, SweetAlertDialog.SUCCESS_TYPE)
+                                        .setTitleText("Absen Sukses")
+                                        .show();
+                            }
+                        }
+                    })
+                    .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
+                        @Override
+                        public void onClick(SweetAlertDialog sDialog) {
+                            sDialog.dismissWithAnimation();
+                        }
+                    })
+                    .show();
+        } else {
+            new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
+                    .setTitleText("Data Tidak Ditemukan")
+                    .show();
+        }
+    }
+
+    private int matching(Mat image1, Mat image2) {
+
+        List<DMatch> matchesList;
+        List<DMatch> goodMatchesList = new LinkedList<DMatch>();
+        MatOfPoint2f goodPoints1 = new MatOfPoint2f();
+        MatOfPoint2f goodPoints2 = new MatOfPoint2f();
+        List<Point> goodPointsList1 = new LinkedList<Point>();
+        List<Point> goodPointsList2 = new LinkedList<Point>();
+
+        Mat descriptor1 = new Mat();
+        Mat descriptor2 = new Mat();
+
+        FeatureDetector detector = FeatureDetector.create(FeatureDetector.SIFT);
+        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SIFT);
+        DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
+
+        MatOfKeyPoint keyPoints1 = new MatOfKeyPoint();
+        MatOfKeyPoint keyPoints2 = new MatOfKeyPoint();
+        MatOfDMatch matches = new MatOfDMatch();
+        MatOfDMatch goodMatches = new MatOfDMatch();
+
+        // detect features
+        detector.detect(image1, keyPoints1);
+        detector.detect(image2, keyPoints2);
+
+        // extract features
+        extractor.compute(image1, keyPoints1, descriptor1);
+        extractor.compute(image2, keyPoints2, descriptor2);
+
+        // match features
+        matcher.match(descriptor1, descriptor2, matches);
+        matchesList = matches.toList();
+
+        // find good matches
+        double minDist = MatchingThreshold;
+        double min = 1000000;
+        double max = 0;
+        double distance;
+        for (int i = 0; i < descriptor1.rows(); i++) {
+            distance = matchesList.get(i).distance;
+            if (distance > max) max = distance;
+            if (distance < min) min = distance;
+            if (distance < minDist) {
+                goodMatchesList.add(matchesList.get(i));
+            }
+        }
+        goodMatches.fromList(goodMatchesList);
+        Log.i(TAG, String.format("MinMax: %f %f", min, max));
+        Log.i(TAG, String.format("All, good: %d %d", matchesList.size(), goodMatchesList.size()));
+
+        // keyPoints of good matches
+        List<KeyPoint> keyPointsList1 = keyPoints1.toList();
+        List<KeyPoint> keyPointsList2 = keyPoints2.toList();
+        DMatch m;
+        for (int i = 0; i < goodMatchesList.size(); i++) {
+
+            m = goodMatchesList.get(i);
+            goodPointsList1.add(keyPointsList1.get(m.queryIdx).pt);
+            goodPointsList2.add(keyPointsList2.get(m.trainIdx).pt);
+        }
+        goodPoints1.fromList(goodPointsList1);
+        goodPoints2.fromList(goodPointsList2);
+
+        // get homography
+        // Mat homography = Calib3d.findHomography( goodPoints1, goodPoints2, Calib3d.RANSAC, 1.0);
+
+        // draw result
+
+        Mat result = new Mat();
+        Scalar green = new Scalar(0, 255, 0);
+        Scalar yellow = new Scalar(255, 255, 0);
+        Scalar blue = new Scalar(0, 0, 255);
+        Scalar red = new Scalar(255, 0, 0);
+        MatOfByte mask = new MatOfByte();
+        int flag = Features2d.NOT_DRAW_SINGLE_POINTS;
+        Features2d.drawMatches(image1, keyPoints1, image2, keyPoints2, goodMatches, result, red, blue, mask, flag);
+
+        // save the result and return the score
+        matchResults.add(matToBitmap(result));
+        int score = goodMatchesList.size();
+        return score;
     }
 
     /**
@@ -240,6 +409,7 @@ public class ProcessFingerprintPresenceActivity extends Activity {
 
         // progressBar
         progressBar = findViewById(R.id.progressBar);
+        matchResults = new ArrayList<Bitmap>();
 
         // event handlers
 //        Button btnSubmit = findViewById(R.id.btnSubmit);
@@ -322,43 +492,6 @@ public class ProcessFingerprintPresenceActivity extends Activity {
             }
         });
     }
-
-//    private void showAlert(final String message, String method, final int param) {
-//        if(method.equals("face_detected")) {
-//            final Services services = new Services(FaceRecognitionActivity.this);
-//            User user = services.FindUser(imagesLabels.get(param));
-//            new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
-//                    .setTitleText(message)
-//                    .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
-//                    .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
-//                        @Override
-//                        public void onClick(SweetAlertDialog sDialog) {
-//                            sDialog.dismissWithAnimation();
-//                            if(services.FindPresence(imagesLabels.get(param)) != null){
-//                                new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.ERROR_TYPE)
-//                                        .setTitleText("User sudah absen")
-//                                        .show();
-//                            } else {
-//                                services.Presence(imagesLabels.get(param), "FaceRecognition");
-//                                new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.SUCCESS_TYPE)
-//                                        .setTitleText("Absen Sukses")
-//                                        .show();
-//                            }
-//                        }
-//                    })
-//                    .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
-//                        @Override
-//                        public void onClick(SweetAlertDialog sDialog) {
-//                            sDialog.dismissWithAnimation();
-//                        }
-//                    })
-//                    .show();
-//        } else {
-//            new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
-//                    .setTitleText(message)
-//                    .show();
-//        }
-//    }
 
     private void saveBitmapToImageStorage(Mat image) {
         int rows = image.rows();

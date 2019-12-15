@@ -3,6 +3,7 @@ package com.eltherbiometric.ui.presence;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
@@ -264,6 +265,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         cameraSize.width = size.x;
         cameraView.setResolution(cameraSize);
         cameraView.setFocusMode(this.getApplicationContext(), 5);
+        cameraView.setFlashMode(this.getApplicationContext(), 4);
 
         // must be initialized after setting the camera resolution
         matCameraFrame = new Mat(cameraSize.height, cameraSize.width, CvType.CV_8UC4);
