@@ -6,6 +6,8 @@ public class Presence {
     public String date;
     public String time;
     public String method;
+    public String lat;
+    public String lng;
 
     public String getNik() {
         return nik;
@@ -45,5 +47,21 @@ public class Presence {
 
     public void setMethod(String method) {
         this.method = method;
+    }
+
+    public String getLat() {
+        return lat;
+    }
+
+    public void setLat(String lat) {
+        this.lat = lat;
+    }
+
+    public String getLng() {
+        return lng;
+    }
+
+    public void setLng(String lng) {
+        this.lng = lng;
     }
 }

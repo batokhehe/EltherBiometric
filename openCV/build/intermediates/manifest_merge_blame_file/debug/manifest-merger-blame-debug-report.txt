@@ -6,8 +6,8 @@
 6
 7    <uses-sdk
 8        android:minSdkVersion="8"
-8-->E:\NAUFALREZPECTOR\Kerja\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+8-->E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 9        android:targetSdkVersion="21" />
-9-->E:\NAUFALREZPECTOR\Kerja\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
+9-->E:\Elther\EltherBiometric\openCV\src\main\AndroidManifest.xml
 10
 11</manifest>

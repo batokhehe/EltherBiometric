@@ -30,9 +30,9 @@ public class Services extends DBHandler {
                 null,
                 null,
                 null);
-        com.eltherbiometric.data.model.User user = new com.eltherbiometric.data.model.User();
-        if (cursor != null) {
-            cursor.moveToFirst();
+        com.eltherbiometric.data.model.User user = null;
+        if (cursor != null && cursor.moveToFirst()) {
+            user = new com.eltherbiometric.data.model.User();
             user.setNik(cursor.getString(cursor.getColumnIndex(User.COLUMN_NIK)));
             user.setName(cursor.getString(cursor.getColumnIndex(User.COLUMN_NAME)));
 
@@ -67,13 +67,14 @@ public class Services extends DBHandler {
         return presence;
     }
 
-    public void Save(String nik, String name) {
+    public void Save(String nik, String name, String division) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         db.beginTransaction();
         try {
             contentValues.put(User.COLUMN_NIK, nik);
             contentValues.put(User.COLUMN_NAME, name);
+            contentValues.put(User.COLUMN_DIVISION, division);
             db.insert(User.TABLE_NAME, null, contentValues);
             db.setTransactionSuccessful();
         } catch (Exception e){
@@ -84,7 +85,7 @@ public class Services extends DBHandler {
         }
     }
 
-    public void Presence(String nik, String method) {
+    public void Presence(String nik, String latitude, String longitude, String method) {
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
         DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
         Date date = new Date();
@@ -97,6 +98,8 @@ public class Services extends DBHandler {
         try {
             contentValues.put(Presence.COLUMN_NIK, nik);
             contentValues.put(Presence.COLUMN_METHOD, method);
+            contentValues.put(Presence.COLUMN_LATITUDE, latitude);
+            contentValues.put(Presence.COLUMN_LONGITUDE, longitude);
             contentValues.put(Presence.COLUMN_DATE, date_);
             contentValues.put(Presence.COLUMN_TIME, time_);
             db.insert(Presence.TABLE_NAME, null, contentValues);

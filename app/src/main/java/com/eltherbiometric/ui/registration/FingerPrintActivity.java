@@ -11,7 +11,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.eltherbiometric.R;
 import com.eltherbiometric.ui.facerecog.TinyDB;
@@ -48,7 +47,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
     // region Private Static Variables
 
     private static final String TAG = "FingerPrintActivity";
-    private String nik, name;
+    private String nik, name, division;
 
     // endregion Private Variables
 
@@ -176,13 +175,16 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
             if(extras == null) {
                 nik = null;
                 name = null;
+                division = null;
             } else {
                 nik= extras.getString("nik");
                 name= extras.getString("name");
+                division= extras.getString("division");
             }
         } else {
             nik = (String) savedInstanceState.getSerializable("nik");
             name = (String) savedInstanceState.getSerializable("name");
+            division = (String) savedInstanceState.getSerializable("division");
         }
         tinydb = new TinyDB(this);
         initialize();
@@ -260,6 +262,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         cameraSize.width = size.x;
         cameraView.setResolution(cameraSize);
         cameraView.setFocusMode(this.getApplicationContext(), 5);
+        cameraView.setFlashMode(this.getApplicationContext(), 4);
 
         // must be initialized after setting the camera resolution
         matCameraFrame = new Mat(cameraSize.height, cameraSize.width, CvType.CV_8UC4);
@@ -298,6 +301,7 @@ public class FingerPrintActivity extends Activity implements CvCameraViewListene
         Intent intent = new Intent(this, ProcessFingerprintRegisterActivity.class);
         intent.putExtra("nik", nik);
         intent.putExtra("name", name);
+        intent.putExtra("division", division);
         this.startActivity(intent);
     }
 

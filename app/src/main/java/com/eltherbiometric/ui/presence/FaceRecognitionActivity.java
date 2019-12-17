@@ -19,13 +19,12 @@
 package com.eltherbiometric.ui.presence;
 
 import android.Manifest;
-import android.animation.Animator;
-import android.animation.ObjectAnimator;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -67,6 +66,14 @@ import com.eltherbiometric.ui.facerecog.CameraBridgeViewBase;
 import com.eltherbiometric.ui.facerecog.NativeMethods;
 import com.eltherbiometric.ui.facerecog.SeekBarArrows;
 import com.eltherbiometric.ui.facerecog.TinyDB;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -90,7 +97,8 @@ import java.util.Set;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 
 
-public class FaceRecognitionActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
+public class FaceRecognitionActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener  {
     private static final String TAG = FaceRecognitionActivity.class.getSimpleName();
     private static final int PERMISSIONS_REQUEST_CODE = 0;
     public ArrayList<Mat> images;
@@ -108,6 +116,18 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
     private Toolbar mToolbar;
     private NativeMethods.TrainFacesTask mTrainFacesTask;
 
+    //GPS
+    private static final int LOCATION_GPS = 2;
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
+    private Location mLastLocation;
+    private GoogleApiClient mGoogleApiClient;
+    private boolean mRequestingLocationUpdates = false;
+    private LocationRequest mLocationRequest;
+    private static int UPDATE_INTERVAL = 10000; // 10 sec
+    private static int FATEST_INTERVAL = 5000; // 5 sec
+    private static int DISPLACEMENT = 10; // 10 meters
+    private double wayLatitude, wayLongitude;
+
     private void showToast(String message, int duration) {
         if (duration != Toast.LENGTH_SHORT && duration != Toast.LENGTH_LONG)
             throw new IllegalArgumentException();
@@ -121,32 +141,41 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
         if(method.equals("face_detected")) {
             final Services services = new Services(FaceRecognitionActivity.this);
             User user = services.FindUser(imagesLabels.get(param));
-            new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
-                    .setTitleText(message)
-                    .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
-                    .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
-                        @Override
-                        public void onClick(SweetAlertDialog sDialog) {
-                            sDialog.dismissWithAnimation();
-                            if(services.FindPresence(imagesLabels.get(param)) != null){
-                                new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.ERROR_TYPE)
-                                        .setTitleText("User sudah absen")
-                                        .show();
-                            } else {
-                                services.Presence(imagesLabels.get(param), "FaceRecognition");
-                                new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.SUCCESS_TYPE)
-                                        .setTitleText("Absen Sukses")
-                                        .show();
+            if (user != null) {
+                new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
+                        .setTitleText(message)
+                        .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
+                        .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+                            @Override
+                            public void onClick(SweetAlertDialog sDialog) {
+                                sDialog.dismissWithAnimation();
+                                if (services.FindPresence(imagesLabels.get(param)) != null) {
+                                    new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.ERROR_TYPE)
+                                            .setTitleText("User sudah absen")
+                                            .show();
+                                } else {
+//                                    Utility utility = new Utility(FaceRecognitionActivity.this, FaceRecognitionActivity.this);
+//                                    String[] location = utility.GetLocation();
+//                                    Log.d(TAG, "onClick: " + location[0]);
+                                    services.Presence(imagesLabels.get(param), String.valueOf(wayLatitude), String.valueOf(wayLongitude), "FaceRecognition");
+                                    new SweetAlertDialog(FaceRecognitionActivity.this, SweetAlertDialog.SUCCESS_TYPE)
+                                            .setTitleText("Absen Sukses")
+                                            .show();
+                                }
                             }
-                        }
-                    })
-                    .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
-                        @Override
-                        public void onClick(SweetAlertDialog sDialog) {
-                            sDialog.dismissWithAnimation();
-                        }
-                    })
-                    .show();
+                        })
+                        .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
+                            @Override
+                            public void onClick(SweetAlertDialog sDialog) {
+                                sDialog.dismissWithAnimation();
+                            }
+                        })
+                        .show();
+            } else {
+                new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
+                        .setTitleText(message)
+                        .show();
+            }
         } else {
             new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
                     .setTitleText(message)
@@ -339,11 +368,16 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
         setContentView(R.layout.activity_face_recognition_template);
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
 //        setSupportActionBar(mToolbar); // Sets the Toolbar to act as the ActionBar for this Activity window
-
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, mToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
+
+        // First we need to check availability of play services
+        if (checkPlayServices()) {
+            // Building the GoogleApi client
+            buildGoogleApiClient();
+        }
 
         final RadioButton mRadioButtonEigenfaces = (RadioButton) findViewById(R.id.eigenfaces);
         final RadioButton mRadioButtonFisherfaces = (RadioButton) findViewById(R.id.fisherfaces);
@@ -571,6 +605,10 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
     @Override
     public void onStart() {
         super.onStart();
+        //GPS
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.connect();
+        }
         // Read threshold values
         float progress = prefs.getFloat("faceThreshold", -1);
         if (progress != -1)
@@ -803,5 +841,66 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    //GPS
+    private void displayLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_GPS);
+        }
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+        if (mLastLocation != null) {
+            wayLatitude = mLastLocation.getLatitude();
+            wayLongitude = mLastLocation.getLongitude();
+            Log.i("GPS", "Latitude : " + wayLatitude + " Longitude : " + wayLongitude);
+        } else {
+            Toast.makeText(getApplicationContext(), "(Couldn't get the location. Make sure location is enabled on the device)", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API).build();
+    }
+
+    private boolean checkPlayServices() {
+        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+                GooglePlayServicesUtil.getErrorDialog(resultCode, this,
+                        PLAY_SERVICES_RESOLUTION_REQUEST).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "This device is not supported.", Toast.LENGTH_LONG).show();
+                finish();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        displayLocation();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.i("GPS", "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 }

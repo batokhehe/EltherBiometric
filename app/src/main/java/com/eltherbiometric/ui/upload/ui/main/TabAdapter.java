@@ -1,7 +1,5 @@
 package com.eltherbiometric.ui.upload.ui.main;
 
-import android.content.Context;
-
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.fragment.app.Fragment;

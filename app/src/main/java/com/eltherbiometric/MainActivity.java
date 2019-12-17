@@ -3,10 +3,17 @@ package com.eltherbiometric;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,6 +31,7 @@ import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
 import com.eltherbiometric.ui.upload.UploadActivity;
 import com.eltherbiometric.utils.AndroidDatabaseManager;
 import com.eltherbiometric.utils.Config;
+import com.google.android.material.snackbar.Snackbar;
 import com.orhanobut.hawk.Hawk;
 
 import org.opencv.core.Mat;
@@ -67,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private String TAG = "MainActivity";
+    private View parentLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +91,18 @@ public class MainActivity extends AppCompatActivity {
         else {
             Log.d("OpenCV", "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+
+        // Check for the camera permission before accessing the camera.  If the
+        // permission is not granted yet, request permission.
+        if (checkPermissions()) {
+            if (!isLocationEnabled()) {
+                Toast.makeText(this, "Turn on location", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            }
+        } else {
+            requestPermissions();
         }
 
         // processed images
@@ -119,6 +140,33 @@ public class MainActivity extends AppCompatActivity {
         initEvents();
     }
 
+    private void requestLocationPermission() {
+        Log.w(TAG, "Location permission is not granted. Requesting permission");
+
+        final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.CAMERA)) {
+            ActivityCompat.requestPermissions(this, permissions, 101);
+            return;
+        }
+
+        final Activity thisActivity = this;
+
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ActivityCompat.requestPermissions(thisActivity, permissions,
+                        101);
+            }
+        };
+
+        Snackbar.make(parentLayout, R.string.permission_camera_rationale,
+                Snackbar.LENGTH_INDEFINITE)
+                .setAction(R.string.ok, listener)
+                .show();
+    }
+
     private void initDialog() {
         dialog = new AlertDialog.Builder(MainActivity.this);
         inflater = getLayoutInflater();
@@ -153,6 +201,7 @@ public class MainActivity extends AppCompatActivity {
         btnRegistration = findViewById(R.id.btnRegistration);
         btnPresensi = findViewById(R.id.btnPresensi);
         btnUpload = findViewById(R.id.btnUpload);
+        parentLayout = findViewById(R.id.parentLayout);
     }
 
     private void initEvents() {
@@ -247,5 +296,38 @@ public class MainActivity extends AppCompatActivity {
             Log.d("OpenCV", "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
+    }
+
+    private boolean checkPermissions(){
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+            return true;
+        }
+        return false;
+    }
+
+    private void requestPermissions(){
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
+                101
+        );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 101) {
+            if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                // Granted. Start getting the location information
+            }
+        }
+    }
+
+    private boolean isLocationEnabled(){
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+                LocationManager.NETWORK_PROVIDER
+        );
     }
 }

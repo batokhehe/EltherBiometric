@@ -1,11 +1,13 @@
 package com.eltherbiometric.ui.fingerprint;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,14 +18,22 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 
 import com.eltherbiometric.R;
 import com.eltherbiometric.data.model.User;
 import com.eltherbiometric.data.sqllite.Services;
 import com.eltherbiometric.ui.fingerprint.utils.ImageSaver;
-import com.eltherbiometric.ui.ocr.GraphicOverlay;
-import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
 import com.eltherbiometric.ui.presence.FingerPrintActivity;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
@@ -57,7 +67,8 @@ import cn.pedant.SweetAlert.SweetAlertDialog;
 /**
  * Process the image to extract skeleton from it.
  */
-public class ProcessFingerprintPresenceActivity extends Activity {
+public class ProcessFingerprintPresenceActivity extends Activity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
 
     // region Public Static Members
 
@@ -86,6 +97,18 @@ public class ProcessFingerprintPresenceActivity extends Activity {
     public static Mat MatQuery;
     public static double MatchingThreshold = 45;
     private ArrayList<Bitmap> matchResults;
+
+    //GPS
+    private static final int LOCATION_GPS = 2;
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
+    private Location mLastLocation;
+    private GoogleApiClient mGoogleApiClient;
+    private boolean mRequestingLocationUpdates = false;
+    private LocationRequest mLocationRequest;
+    private static int UPDATE_INTERVAL = 10000; // 10 sec
+    private static int FATEST_INTERVAL = 5000; // 5 sec
+    private static int DISPLACEMENT = 10; // 10 meters
+    private double wayLatitude, wayLongitude;
 
     //endregion Private Variables
 
@@ -119,6 +142,11 @@ public class ProcessFingerprintPresenceActivity extends Activity {
         } else {
             nik = (String) savedInstanceState.getSerializable("nik");
             name = (String) savedInstanceState.getSerializable("name");
+        }
+        // First we need to check availability of play services
+        if (checkPlayServices()) {
+            // Building the GoogleApi client
+            buildGoogleApiClient();
         }
         initialize();
     }
@@ -215,32 +243,38 @@ public class ProcessFingerprintPresenceActivity extends Activity {
         if(!method.equals("not_detected")) {
             final Services services = new Services(ProcessFingerprintPresenceActivity.this);
             User user = services.FindUser(nik);
-            new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
-                    .setTitleText("Konfirmasi Data")
-                    .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
-                    .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
-                        @Override
-                        public void onClick(SweetAlertDialog sDialog) {
-                            sDialog.dismissWithAnimation();
-                            if(services.FindPresence(nik) != null){
-                                new SweetAlertDialog(ProcessFingerprintPresenceActivity.this, SweetAlertDialog.ERROR_TYPE)
-                                        .setTitleText("User sudah absen")
-                                        .show();
-                            } else {
-                                services.Presence(nik, "FingerprintRecognition");
-                                new SweetAlertDialog(ProcessFingerprintPresenceActivity.this, SweetAlertDialog.SUCCESS_TYPE)
-                                        .setTitleText("Absen Sukses")
-                                        .show();
+            if (user != null) {
+                new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
+                        .setTitleText("Konfirmasi Data")
+                        .setContentText("NIK : " + user.getNik() + " \nNama : " + user.getName())
+                        .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+                            @Override
+                            public void onClick(SweetAlertDialog sDialog) {
+                                sDialog.dismissWithAnimation();
+                                if (services.FindPresence(nik) != null) {
+                                    new SweetAlertDialog(ProcessFingerprintPresenceActivity.this, SweetAlertDialog.ERROR_TYPE)
+                                            .setTitleText("User sudah absen")
+                                            .show();
+                                } else {
+                                    services.Presence(nik, String.valueOf(wayLatitude), String.valueOf(wayLongitude), "FingerprintRecognition");
+                                    new SweetAlertDialog(ProcessFingerprintPresenceActivity.this, SweetAlertDialog.SUCCESS_TYPE)
+                                            .setTitleText("Absen Sukses")
+                                            .show();
+                                }
                             }
-                        }
-                    })
-                    .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
-                        @Override
-                        public void onClick(SweetAlertDialog sDialog) {
-                            sDialog.dismissWithAnimation();
-                        }
-                    })
-                    .show();
+                        })
+                        .setCancelButton("Bukan", new SweetAlertDialog.OnSweetClickListener() {
+                            @Override
+                            public void onClick(SweetAlertDialog sDialog) {
+                                sDialog.dismissWithAnimation();
+                            }
+                        })
+                        .show();
+            } else {
+                new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
+                        .setTitleText("Data Tidak Ditemukan")
+                        .show();
+            }
         } else {
             new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
                     .setTitleText("Data Tidak Ditemukan")
@@ -1536,4 +1570,74 @@ public class ProcessFingerprintPresenceActivity extends Activity {
     }
 
     // endregion Private Methods
+
+    //GPS
+    @Override
+    public void onStart() {
+        super.onStart();
+        //GPS
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.connect();
+        }
+    }
+
+    private void displayLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_GPS);
+        }
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+        if (mLastLocation != null) {
+            wayLatitude = mLastLocation.getLatitude();
+            wayLongitude = mLastLocation.getLongitude();
+            Log.i("GPS", "Latitude : " + wayLatitude + " Longitude : " + wayLongitude);
+        } else {
+            Toast.makeText(getApplicationContext(), "(Couldn't get the location. Make sure location is enabled on the device)", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API).build();
+    }
+
+    private boolean checkPlayServices() {
+        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+                GooglePlayServicesUtil.getErrorDialog(resultCode, this,
+                        PLAY_SERVICES_RESOLUTION_REQUEST).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "This device is not supported.", Toast.LENGTH_LONG).show();
+                finish();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        displayLocation();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.i("GPS", "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
+    }
 }

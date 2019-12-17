@@ -3,7 +3,6 @@ package com.eltherbiometric.ui.presence;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;

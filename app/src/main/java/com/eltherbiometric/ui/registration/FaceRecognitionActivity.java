@@ -53,9 +53,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.eltherbiometric.MainActivity;
 import com.eltherbiometric.R;
-import com.eltherbiometric.data.sqllite.Services;
 import com.eltherbiometric.ui.facerecog.CameraBridgeViewBase;
 import com.eltherbiometric.ui.facerecog.NativeMethods;
 import com.eltherbiometric.ui.facerecog.SeekBarArrows;
@@ -76,10 +74,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 public class FaceRecognitionActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -99,7 +95,7 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
     private TinyDB tinydb;
     private Toolbar mToolbar;
     private NativeMethods.TrainFacesTask mTrainFacesTask;
-    private String nik, name;
+    private String nik, name, division;
     private int counter = 0;
 
     private void showToast(String message, int duration) {
@@ -251,13 +247,16 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
             if(extras == null) {
                 nik = null;
                 name = null;
+                division = null;
             } else {
                 nik= extras.getString("nik");
                 name= extras.getString("name");
+                division= extras.getString("division");
             }
         } else {
             nik = (String) savedInstanceState.getSerializable("nik");
             name = (String) savedInstanceState.getSerializable("name");
+            division = (String) savedInstanceState.getSerializable("division");
         }
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -419,6 +418,7 @@ public class FaceRecognitionActivity extends AppCompatActivity implements Camera
                 Intent intent = new Intent(FaceRecognitionActivity.this, FingerPrintActivity.class);
                 intent.putExtra("nik", nik);
                 intent.putExtra("name", name);
+                intent.putExtra("division", division);
                 startActivity(intent);
                 finish();
             }

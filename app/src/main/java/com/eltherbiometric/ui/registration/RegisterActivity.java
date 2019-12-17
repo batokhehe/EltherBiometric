@@ -17,7 +17,7 @@ import java.util.Map;
 public class RegisterActivity extends AppCompatActivity {
 
     private ArrayList<String> OcrDatas;
-    private EditText etProvince, etNik, etName, etBirth, etGender, etAddress, etReligion, etStatus, etWork, etNationality, etExpire;
+    private EditText etProvince, etNik, etName, etDivision, etBirth, etGender, etAddress, etReligion, etStatus, etWork, etNationality, etExpire;
     private Button btnNext;
 
     @Override
@@ -47,6 +47,7 @@ public class RegisterActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String nik = etNik.getText().toString();
                 String name = etName.getText().toString();
+                String division = etDivision.getText().toString();
                 String birth = etBirth.getText().toString();
                 String gender = etGender.getText().toString();
                 String address = etAddress.getText().toString();
@@ -72,6 +73,7 @@ public class RegisterActivity extends AppCompatActivity {
                 Intent intent = new Intent(RegisterActivity.this, FaceRecognitionActivity.class);
                 intent.putExtra("nik", nik);
                 intent.putExtra("name", name);
+                intent.putExtra("division", division);
                 intent.putExtra("date", birth);
                 intent.putExtra("time", gender);
                 intent.putExtra("method", address);
@@ -104,6 +106,7 @@ public class RegisterActivity extends AppCompatActivity {
         etProvince = findViewById(R.id.province);
         etNik = findViewById(R.id.nik);
         etName = findViewById(R.id.name);
+        etDivision = findViewById(R.id.division);
         etBirth = findViewById(R.id.birth);
         etGender = findViewById(R.id.gender);
         etAddress = findViewById(R.id.address);

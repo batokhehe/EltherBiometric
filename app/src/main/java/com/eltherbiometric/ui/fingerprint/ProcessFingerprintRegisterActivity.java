@@ -17,7 +17,6 @@ import com.eltherbiometric.MainActivity;
 import com.eltherbiometric.R;
 import com.eltherbiometric.data.sqllite.Services;
 import com.eltherbiometric.ui.fingerprint.utils.ImageSaver;
-import com.eltherbiometric.ui.presence.FaceRecognitionActivity;
 import com.eltherbiometric.ui.registration.FingerPrintActivity;
 
 import org.opencv.android.Utils;
@@ -62,7 +61,7 @@ public class ProcessFingerprintRegisterActivity extends Activity {
     private Mat matRidgeFilter;
     private Mat matEnhanced;
     private Mat matResult;
-    private String nik, name;
+    private String nik, name, division;
 
     //endregion Private Variables
 
@@ -89,13 +88,16 @@ public class ProcessFingerprintRegisterActivity extends Activity {
             if(extras == null) {
                 nik = null;
                 name = null;
+                division = null;
             } else {
                 nik= extras.getString("nik");
                 name= extras.getString("name");
+                division= extras.getString("division");
             }
         } else {
             nik = (String) savedInstanceState.getSerializable("nik");
             name = (String) savedInstanceState.getSerializable("name");
+            division = (String) savedInstanceState.getSerializable("division");
         }
         initialize();
     }
@@ -227,7 +229,7 @@ public class ProcessFingerprintRegisterActivity extends Activity {
             public void onClick(View view) {
                 FingerPrintActivity.addProcessedImage(matResult, nik);
                 Services services = new Services(ProcessFingerprintRegisterActivity.this);
-                services.Save(nik, name);
+                services.Save(nik, name, division);
                 Intent intent = new Intent(ProcessFingerprintRegisterActivity.this, MainActivity.class);
                 intent.putExtra("insert", "success");
                 startActivity(intent);

@@ -17,7 +17,6 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.eltherbiometric.MainActivity;
 import com.eltherbiometric.R;
 import com.eltherbiometric.ui.fingerprint.utils.ImageSaver;
 
