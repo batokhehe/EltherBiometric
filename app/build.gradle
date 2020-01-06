@@ -109,6 +109,14 @@ dependencies {
 
     //Location Services
     implementation 'com.google.android.gms:play-services-location:17.0.0'
+
+    //Retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.7.1'
+    implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
+
+    //Chuck
+    debugImplementation 'com.readystatesoftware.chuck:library:1.1.0'
+    releaseImplementation 'com.readystatesoftware.chuck:library-no-op:1.1.0'
 }
 
 // These values are all set in my global gradle.properties file

@@ -245,11 +245,14 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                 startActivity(intent);
                 finish();
+                break;
             case R.id.setting:
                 showSettingDialog();
+                break;
             case R.id.db_manager:
                 Intent intent1 = new Intent(MainActivity.this, AndroidDatabaseManager.class);
                 startActivity(intent1);
+                break;
         }
 
         return super.onOptionsItemSelected(item);
